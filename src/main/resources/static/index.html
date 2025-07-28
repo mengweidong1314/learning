@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF下载演示系统 - 退款申请</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #1e7e34;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .api-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .api-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .status-legend {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF下载演示系统 - 退款申请</h1>
+        
+        <!-- 基本操作区域 -->
+        <div class="section">
+            <h2>基本操作</h2>
+            <div class="button-group">
+                <button onclick="createSampleData()">创建示例数据</button>
+                <button onclick="getAllRefunds()" class="secondary">获取所有申请</button>
+                <button onclick="getStatistics()" class="secondary">获取统计信息</button>
+            </div>
+            <div id="basicResult" class="result"></div>
+        </div>
+
+        <!-- PDF下载区域 -->
+        <div class="section">
+            <h2>PDF下载功能</h2>
+            
+            <div class="form-group">
+                <label for="refundId">退款申请ID（用于下载单个申请）:</label>
+                <input type="number" id="refundId" placeholder="输入退款申请ID，例如：1" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="statusFilter">状态筛选:</label>
+                <select id="statusFilter">
+                    <option value="">全部状态</option>
+                    <option value="0">待审核</option>
+                    <option value="1">审核通过</option>
+                    <option value="2">审核拒绝</option>
+                    <option value="3">退款中</option>
+                    <option value="4">退款完成</option>
+                    <option value="5">退款失败</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button onclick="downloadSinglePdf()">下载单个申请PDF</button>
+                <button onclick="downloadListPdf()">下载完整列表PDF</button>
+                <button onclick="downloadByStatusPdf()">按状态下载PDF</button>
+                <button onclick="downloadStatisticsPdf()" class="success">下载统计报告PDF</button>
+            </div>
+            <div id="downloadResult" class="result"></div>
+        </div>
+
+        <!-- 时间范围下载 -->
+        <div class="section">
+            <h2>按时间范围下载</h2>
+            <div class="form-group">
+                <label for="startTime">开始时间:</label>
+                <input type="datetime-local" id="startTime" value="2024-01-01T00:00">
+            </div>
+            <div class="form-group">
+                <label for="endTime">结束时间:</label>
+                <input type="datetime-local" id="endTime" value="2024-12-31T23:59">
+            </div>
+            <div class="button-group">
+                <button onclick="downloadByDatePdf()">按时间范围下载PDF</button>
+            </div>
+            <div id="dateResult" class="result"></div>
+        </div>
+
+        <!-- 自定义PDF -->
+        <div class="section">
+            <h2>自定义PDF生成</h2>
+            <div class="form-group">
+                <label for="customTitle">PDF标题:</label>
+                <input type="text" id="customTitle" placeholder="输入PDF标题" value="自定义退款报告">
+            </div>
+            <div class="form-group">
+                <label for="customContent">PDF内容:</label>
+                <textarea id="customContent" placeholder="输入PDF内容">这是一份自定义的退款申请报告。
+
+本报告包含以下内容：
+1. 退款申请概况
+2. 申请状态分析
+3. 处理时效统计
+4. 建议和改进措施
+
+报告生成时间：2024年度
+负责部门：客服部门</textarea>
+            </div>
+            <div class="button-group">
+                <button onclick="downloadCustomPdf()" class="success">生成自定义PDF</button>
+            </div>
+            <div id="customResult" class="result"></div>
+        </div>
+
+        <!-- API接口列表 -->
+        <div class="section">
+            <h2>可用的API接口</h2>
+            <ul class="api-list">
+                <li>GET /api/refunds - 获取所有退款申请</li>
+                <li>GET /api/refunds/{id} - 获取单个退款申请</li>
+                <li>POST /api/refunds - 创建退款申请</li>
+                <li>GET /api/refunds/{id}/download/pdf - 下载单个申请PDF</li>
+                <li>GET /api/refunds/download/list-pdf - 下载申请列表PDF</li>
+                <li>GET /api/refunds/download/list-pdf-by-status?status=1 - 按状态下载PDF</li>
+                <li>GET /api/refunds/download/list-pdf-by-date?startTime=...&endTime=... - 按时间下载PDF</li>
+                <li>GET /api/refunds/download/statistics-pdf - 下载统计报告PDF</li>
+                <li>POST /api/refunds/download/custom-pdf - 生成自定义PDF</li>
+                <li>POST /api/refunds/create-sample - 创建示例数据</li>
+            </ul>
+            
+            <div class="status-legend">
+                <strong>状态说明：</strong><br>
+                0-待审核, 1-审核通过, 2-审核拒绝, 3-退款中, 4-退款完成, 5-退款失败
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/refunds';
+
+        // 显示结果
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.style.display = 'block';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+
+        // 创建示例数据
+        async function createSampleData() {
+            try {
+                const response = await fetch(`${API_BASE}/create-sample`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    showResult('basicResult', '示例数据创建成功！');
+                } else {
+                    showResult('basicResult', '创建示例数据失败', true);
+                }
+            } catch (error) {
+                showResult('basicResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 获取所有申请
+        async function getAllRefunds() {
+            try {
+                const response = await fetch(`${API_BASE}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('basicResult', `获取成功，共 ${data.length} 条记录`);
+                } else {
+                    showResult('basicResult', '获取数据失败', true);
+                }
+            } catch (error) {
+                showResult('basicResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 获取统计信息
+        async function getStatistics() {
+            try {
+                showResult('basicResult', '统计功能请使用PDF下载查看详细报告');
+            } catch (error) {
+                showResult('basicResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 下载单个PDF
+        async function downloadSinglePdf() {
+            const id = document.getElementById('refundId').value;
+            if (!id) {
+                showResult('downloadResult', '请输入退款申请ID', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/${id}/download/pdf`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `退款申请单_${id}.pdf`);
+                    showResult('downloadResult', 'PDF下载成功！');
+                } else if (response.status === 404) {
+                    showResult('downloadResult', '未找到该退款申请', true);
+                } else {
+                    showResult('downloadResult', 'PDF下载失败', true);
+                }
+            } catch (error) {
+                showResult('downloadResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 下载列表PDF
+        async function downloadListPdf() {
+            try {
+                const response = await fetch(`${API_BASE}/download/list-pdf`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, '退款申请列表.pdf');
+                    showResult('downloadResult', 'PDF下载成功！');
+                } else {
+                    showResult('downloadResult', 'PDF下载失败', true);
+                }
+            } catch (error) {
+                showResult('downloadResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 按状态下载PDF
+        async function downloadByStatusPdf() {
+            const status = document.getElementById('statusFilter').value;
+            if (!status) {
+                showResult('downloadResult', '请选择状态', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/download/list-pdf-by-status?status=${status}`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `退款申请列表_状态${status}.pdf`);
+                    showResult('downloadResult', 'PDF下载成功！');
+                } else {
+                    showResult('downloadResult', 'PDF下载失败', true);
+                }
+            } catch (error) {
+                showResult('downloadResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 下载统计报告PDF
+        async function downloadStatisticsPdf() {
+            try {
+                const response = await fetch(`${API_BASE}/download/statistics-pdf`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, '退款申请统计报告.pdf');
+                    showResult('downloadResult', '统计报告PDF下载成功！');
+                } else {
+                    showResult('downloadResult', '统计报告PDF下载失败', true);
+                }
+            } catch (error) {
+                showResult('downloadResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 按时间范围下载PDF
+        async function downloadByDatePdf() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            
+            if (!startTime || !endTime) {
+                showResult('dateResult', '请选择时间范围', true);
+                return;
+            }
+            
+            try {
+                const url = `${API_BASE}/download/list-pdf-by-date?startTime=${startTime}:00&endTime=${endTime}:59`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `退款申请列表_${startTime}至${endTime}.pdf`);
+                    showResult('dateResult', 'PDF下载成功！');
+                } else {
+                    showResult('dateResult', 'PDF下载失败', true);
+                }
+            } catch (error) {
+                showResult('dateResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 下载自定义PDF
+        async function downloadCustomPdf() {
+            const title = document.getElementById('customTitle').value;
+            const content = document.getElementById('customContent').value;
+            
+            if (!title || !content) {
+                showResult('customResult', '请填写标题和内容', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/download/custom-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, content })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `${title}.pdf`);
+                    showResult('customResult', '自定义PDF生成成功！');
+                } else {
+                    showResult('customResult', '自定义PDF生成失败', true);
+                }
+            } catch (error) {
+                showResult('customResult', '网络错误：' + error.message, true);
+            }
+        }
+
+        // 下载Blob文件
+        function downloadBlob(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // 设置默认时间
+        window.onload = function() {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 1); // 当年1月1日
+            const end = new Date(now.getFullYear(), 11, 31, 23, 59); // 当年12月31日
+            
+            document.getElementById('startTime').value = start.toISOString().slice(0, 16);
+            document.getElementById('endTime').value = end.toISOString().slice(0, 16);
+        };
+    </script>
+</body>
+</html>
